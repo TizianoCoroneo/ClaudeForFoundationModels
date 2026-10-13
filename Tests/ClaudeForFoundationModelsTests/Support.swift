@@ -97,6 +97,7 @@ func thinkingTurnSSE(thinkingDeltas: [String]) -> Data {
 }
 
 /// Text of every reasoning entry in the transcript, in order, joined.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func reasoningText(in transcript: Transcript) -> String {
   reasoningEntries(in: transcript)
     .flatMap(\.segments)
@@ -108,6 +109,7 @@ func reasoningText(in transcript: Transcript) -> String {
 }
 
 /// Reasoning entries in the transcript, in order.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func reasoningEntries(in transcript: Transcript) -> [Transcript.Reasoning] {
   transcript.compactMap { entry in
     if case .reasoning(let r) = entry { return r }
@@ -231,6 +233,7 @@ final class MockTransport: HTTPTransport {
 
 /// One content block of a canned assistant turn, plus the JSON the API would
 /// report for it once assembled.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 enum TurnBlock {
   case text([String])
   case citedText(String, citation: String)
@@ -329,6 +332,7 @@ enum TurnBlock {
 
 /// A complete assistant response made of `blocks`, reporting 10 input and 5
 /// output tokens. `message_start` names `model`.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func turn(
   _ blocks: [TurnBlock],
   stopReason: String = "end_turn",
@@ -355,6 +359,7 @@ func turn(
 
 /// The activity `TurnBlock.search` produces, with `TurnBlock.searchResult`'s
 /// hit when `answered`.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func searchActivity(id: String, query: String, answered: Bool) -> ClaudeServerToolActivity {
   ClaudeServerToolActivity(
     id: id,
@@ -387,6 +392,7 @@ func makeTestImage(width: Int = 4, height: Int = 4) -> CGImage {
   return context.makeImage()!
 }
 
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 extension LanguageModelExecutorGenerationRequest {
   /// The SDK's memberwise initializer has no defaults; tests only vary a few
   /// fields.
@@ -413,6 +419,7 @@ extension LanguageModelExecutorGenerationRequest {
 /// injected transport, so `LanguageModelSession` exercises the full pipeline
 /// offline — request building, wire auth, SSE parsing, translation, and the
 /// framework's transcript assembly.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 struct StubbedClaudeModel: LanguageModel {
   typealias Executor = StubbedExecutor
 
@@ -462,6 +469,7 @@ struct StubbedClaudeModel: LanguageModel {
   }
 }
 
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 struct StubbedExecutor: LanguageModelExecutor {
   typealias Model = StubbedClaudeModel
 
@@ -522,6 +530,7 @@ func serverToolUse(id: String, name: String, input: JSONValue) -> JSONValue {
   ["type": "server_tool_use", "id": .string(id), "name": .string(name), "input": input]
 }
 
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 extension TurnRecord {
   var metadata: [String: any ConvertibleToGeneratedContent] {
     Self.metadata(turn: turn, stored: blocks.map(\.stored))
@@ -529,6 +538,7 @@ extension TurnRecord {
 }
 
 /// A record of `blocks` at consecutive positions from `start` in `turn`.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func record(_ blocks: [JSONValue], from start: Int = 0, turn: String = "turn-1") -> TurnRecord {
   TurnRecord(
     turn: turn,
@@ -540,6 +550,7 @@ func record(_ blocks: [JSONValue], from start: Int = 0, turn: String = "turn-1")
 /// segments laid out the way the translator would have: a text segment per
 /// text block and an empty placeholder segment per server tool call and per
 /// handover.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func recordedResponse(
   _ blocks: [JSONValue],
   from start: Int = 0,
@@ -565,6 +576,7 @@ func recordedResponse(
 
 /// A reasoning entry recorded as `block` at `position`, projected the way
 /// the translator would have.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func recordedReasoning(
   _ block: JSONValue,
   at position: Int,
@@ -583,6 +595,7 @@ func recordedReasoning(
 }
 
 /// A tool-calls entry whose single call is recorded as `block` at `position`.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func recordedToolCall(
   _ block: JSONValue,
   at position: Int,
@@ -603,6 +616,7 @@ func recordedToolCall(
 }
 
 /// Response entries in the transcript, in order.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func responseEntries(in transcript: Transcript) -> [Transcript.Response] {
   transcript.compactMap { entry in
     if case .response(let response) = entry { return response }
@@ -612,6 +626,7 @@ func responseEntries(in transcript: Transcript) -> [Transcript.Response] {
 
 /// Everything recorded on the transcript's model entries, turn by turn in
 /// the order the API sent it.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
 func recordedBlocks(in transcript: Transcript) -> [JSONValue] {
   var all: [JSONValue] = []
   var turn: [TurnRecord.Block] = []

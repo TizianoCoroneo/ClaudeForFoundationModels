@@ -1,5 +1,7 @@
 # Claude for Foundation Models
 
+> **Fork.** This fork lowers the package's minimum platforms to iOS 18, macOS 15, visionOS 2, and watchOS 11, and marks the API `@available` from OS 27. Apps with an older deployment target can link it and call it behind `if #available`. See [upstream issue #12](https://github.com/anthropics/ClaudeForFoundationModels/issues/12).
+
 Use Claude as a server-side language model through Apple's [Foundation Models](https://developer.apple.com/documentation/foundationmodels) framework. The package conforms Claude to the framework's `LanguageModel` protocol, so you drive it with the same `LanguageModelSession` API you use for Apple's on-device model — `respond(to:)`, streaming, guided generation, and tool calling all work the same way.
 
 > **Beta.** This package targets the Foundation Models server-side language model API introduced in the OS 27 betas. APIs may change before general availability.
