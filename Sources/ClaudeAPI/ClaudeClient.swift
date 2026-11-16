@@ -130,6 +130,7 @@ package struct ClaudeClient: Sendable {
       err.requestID =
         envelope.requestID
         ?? http.value(forHTTPHeaderField: "request-id")
+      err.statusCode = http.statusCode
       throw err
     }
     // Cap the body excerpt so unexpected error pages can't flood logs via errorDescription.
@@ -154,7 +155,8 @@ package struct ClaudeClient: Sendable {
     throw APIError(
       kind: kind,
       message: "HTTP \(http.statusCode): \(excerpt)",
-      requestID: http.value(forHTTPHeaderField: "request-id")
+      requestID: http.value(forHTTPHeaderField: "request-id"),
+      statusCode: http.statusCode
     )
   }
 }

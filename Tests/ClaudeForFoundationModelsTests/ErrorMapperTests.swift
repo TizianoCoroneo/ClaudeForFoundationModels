@@ -24,6 +24,15 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
+  private func apiError(_ error: any Error) -> (statusCode: Int?, type: String, message: String)? {
+    guard case ClaudeError.apiError(let statusCode, let type, let message) = error else {
+      Issue.record("expected apiError, got \(error)")
+      return nil
+    }
+    return (statusCode, type, message)
+  }
+
+  @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
   @Test func `rate limit becomes rateLimited with no reset date`() {
     guard case LanguageModelError.rateLimited(let payload) = mapped(.rateLimit, "slow down") else {
       Issue.record("expected rateLimited")
@@ -65,13 +74,13 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `plain invalid request passes through unchanged`() {
-    #expect((mapped(.invalidRequest, "missing field") as? APIError)?.kind == .invalidRequest)
+  @Test func `plain invalid request becomes apiError with its type`() {
+    #expect(apiError(mapped(.invalidRequest, "missing field"))?.type == "invalid_request_error")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `not found passes through unchanged`() {
-    #expect((mapped(.notFound) as? APIError)?.kind == .notFound)
+  @Test func `not found becomes apiError with its type`() {
+    #expect(apiError(mapped(.notFound))?.type == "not_found_error")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
@@ -83,15 +92,17 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `permission passes through unchanged`() {
+  @Test func `permission becomes apiError, not missingCredential`() {
     // A valid credential without access is not a missing credential — keep
     // the API's own message so the developer sees what was denied.
-    #expect((mapped(.permission) as? APIError)?.kind == .permission)
+    let error = apiError(mapped(.permission, "denied"))
+    #expect(error?.type == "permission_error")
+    #expect(error?.message == "denied")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `generic api error passes through unchanged`() {
-    #expect((mapped(.api, "internal error") as? APIError)?.kind == .api)
+  @Test func `generic api error becomes apiError with its type`() {
+    #expect(apiError(mapped(.api, "internal error"))?.type == "api_error")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
@@ -130,8 +141,40 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `an unrecognized API error kind passes through as the APIError`() {
-    #expect((mapped(.other, "novel failure") as? APIError)?.kind == .other)
+  @Test func `an unrecognized API error type keeps its name`() {
+    let error = apiError(
+      ErrorMapper.map(
+        APIError(kind: .other, message: "novel failure", type: "billing_error"),
+        usesAppAttest: false
+      )
+    )
+    #expect(error?.type == "billing_error")
+    #expect(error?.message == "novel failure")
+  }
+
+  @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
+  @Test func `a gateway's spent budget keeps its status and type`() {
+    // LiteLLM answers a key over its budget with HTTP 422 and its own type.
+    let error = apiError(
+      ErrorMapper.map(
+        APIError(
+          kind: .other,
+          message: "Budget has been exceeded!",
+          requestID: "req_7",
+          statusCode: 422,
+          type: "budget_exceeded"
+        ),
+        usesAppAttest: false
+      )
+    )
+    #expect(error?.statusCode == 422)
+    #expect(error?.type == "budget_exceeded")
+    #expect(error?.message.contains("req_7") == true)
+  }
+
+  @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
+  @Test func `an error event inside a stream has no status`() {
+    #expect(apiError(mapped(.api))?.statusCode == nil)
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)

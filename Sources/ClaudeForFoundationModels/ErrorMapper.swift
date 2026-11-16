@@ -83,10 +83,12 @@ enum ErrorMapper {
     case .authentication:
       return usesAppAttest ? ClaudeError.attestationFailed : ClaudeError.missingCredential
     case .permission, .api, .invalidRequest, .notFound, .other:
-      // No honest framework-error equivalent — surface the API error itself.
+      // No honest framework-error equivalent — surface the API error itself,
+      // as a public type callers can match on: its status and type are what
+      // tell a gateway's own refusals (a spent budget) from the API's.
       // `.permission` means the credential exists but isn't allowed here;
       // calling that a missing credential would send users to key entry.
-      return error
+      return ClaudeError.apiError(statusCode: error.statusCode, type: error.type, message: detail)
     }
   }
 }

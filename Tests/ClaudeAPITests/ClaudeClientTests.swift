@@ -92,6 +92,25 @@ import Testing
     }
     #expect(error.kind == .rateLimit)
     #expect(error.requestID == "req_envelope")
+    #expect(error.statusCode == 429)
+  }
+
+  @Test func `send keeps a gateway's own error type and status`() async throws {
+    // LiteLLM's body for a key over its budget: its own envelope, no top-level type.
+    let transport = MockTransport(
+      status: 422,
+      body: Data(
+        #"{"error":{"message":"Budget has been exceeded!","type":"budget_exceeded","param":null,"code":"422"}}"#
+          .utf8
+      )
+    )
+
+    let error = try await #require(throws: APIError.self) {
+      try await client(transport).send(MessagesRequest(model: "m", messages: [.user("hi")]))
+    }
+    #expect(error.kind == .other)
+    #expect(error.type == "budget_exceeded")
+    #expect(error.statusCode == 422)
   }
 
   @Test func `send falls back to the request-id header when the body has no envelope`() async throws
@@ -108,6 +127,7 @@ import Testing
     #expect(error.kind == .api)
     #expect(error.requestID == "req_header")
     #expect(error.message.contains("HTTP 500"))
+    #expect(error.statusCode == 500)
   }
 
   // MARK: - Streaming

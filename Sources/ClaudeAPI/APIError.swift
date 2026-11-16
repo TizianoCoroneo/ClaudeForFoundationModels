@@ -26,13 +26,29 @@ package struct APIError: Error, Sendable, Hashable, Codable {
   }
 
   package var kind: Kind
+  /// The error's type as the response named it. For the types the API
+  /// documents this is `kind`'s raw value. For any other it is the name that
+  /// was sent, which `kind` reduces to `.other`: a gateway in front of the
+  /// API may send types of its own, such as LiteLLM's `budget_exceeded`.
+  package var type: String
   package var message: String
   package var requestID: String?
+  /// The HTTP status of the response that carried the error. `nil` for an
+  /// `error` event inside a stream, which arrives after a `200`.
+  package var statusCode: Int?
 
-  package init(kind: Kind, message: String, requestID: String? = nil) {
+  package init(
+    kind: Kind,
+    message: String,
+    requestID: String? = nil,
+    statusCode: Int? = nil,
+    type: String? = nil
+  ) {
     self.kind = kind
+    self.type = type ?? kind.rawValue
     self.message = message
     self.requestID = requestID
+    self.statusCode = statusCode
   }
 
   private enum CodingKeys: String, CodingKey { case type, message }
@@ -40,20 +56,22 @@ package struct APIError: Error, Sendable, Hashable, Codable {
   package init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     kind = try c.decode(Kind.self, forKey: .type)
+    type = try c.decode(String.self, forKey: .type)
     message = try c.decode(String.self, forKey: .message)
     requestID = nil
+    statusCode = nil
   }
 
   package func encode(to encoder: Encoder) throws {
     var c = encoder.container(keyedBy: CodingKeys.self)
-    try c.encode(kind, forKey: .type)
+    try c.encode(type, forKey: .type)
     try c.encode(message, forKey: .message)
   }
 }
 
 extension APIError: LocalizedError {
   package var errorDescription: String? {
-    "\(kind.rawValue): \(message)" + (requestID.map { " (request_id: \($0))" } ?? "")
+    "\(type): \(message)" + (requestID.map { " (request_id: \($0))" } ?? "")
   }
 }
 
