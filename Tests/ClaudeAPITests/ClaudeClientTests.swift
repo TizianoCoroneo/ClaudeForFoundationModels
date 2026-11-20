@@ -92,6 +92,33 @@ import Testing
     }
     #expect(error.kind == .rateLimit)
     #expect(error.requestID == "req_envelope")
+    #expect(error.statusCode == 429)
+    #expect(error.type == "rate_limit_error")
+  }
+
+  @Test func `an enveloped error of an unknown type keeps the type and the HTTP status`() async throws
+  {
+    // A proxy in front of the API answers with error types of its own, in an
+    // OpenAI-style envelope with no top-level type.
+    let transport = MockTransport(
+      status: 422,
+      body: Data(
+        #"{"error":{"message":"Budget has been exceeded","type":"budget_exceeded","param":null,"code":"422"}}"#
+          .utf8
+      )
+    )
+
+    let error = try await #require(throws: APIError.self) {
+      for try await _ in client(transport)
+        .stream(
+          MessagesRequest(model: "m", messages: [.user("hi")])
+        )
+      {}
+    }
+    #expect(error.kind == .other)
+    #expect(error.type == "budget_exceeded")
+    #expect(error.statusCode == 422)
+    #expect(error.message == "Budget has been exceeded")
   }
 
   @Test func `send falls back to the request-id header when the body has no envelope`() async throws
@@ -108,6 +135,8 @@ import Testing
     #expect(error.kind == .api)
     #expect(error.requestID == "req_header")
     #expect(error.message.contains("HTTP 500"))
+    #expect(error.statusCode == 500)
+    #expect(error.type == nil)
   }
 
   // MARK: - Streaming

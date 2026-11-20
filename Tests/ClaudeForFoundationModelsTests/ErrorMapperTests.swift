@@ -23,6 +23,16 @@ import Testing
     )
   }
 
+  /// The status, type and message of a mapped `ClaudeError.apiError`, or
+  /// `nil` for anything else.
+  @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
+  private func apiError(_ error: any Error) -> (statusCode: Int?, type: String, message: String)? {
+    guard case ClaudeError.apiError(let statusCode, let type, let message) = error else {
+      return nil
+    }
+    return (statusCode, type, message)
+  }
+
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
   @Test func `rate limit becomes rateLimited with no reset date`() {
     guard case LanguageModelError.rateLimited(let payload) = mapped(.rateLimit, "slow down") else {
@@ -65,13 +75,15 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `plain invalid request passes through unchanged`() {
-    #expect((mapped(.invalidRequest, "missing field") as? APIError)?.kind == .invalidRequest)
+  @Test func `plain invalid request becomes apiError with its type and message`() {
+    let error = apiError(mapped(.invalidRequest, "missing field"))
+    #expect(error?.type == "invalid_request_error")
+    #expect(error?.message == "missing field")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `not found passes through unchanged`() {
-    #expect((mapped(.notFound) as? APIError)?.kind == .notFound)
+  @Test func `not found becomes apiError`() {
+    #expect(apiError(mapped(.notFound))?.type == "not_found_error")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
@@ -83,15 +95,42 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `permission passes through unchanged`() {
+  @Test func `permission becomes apiError, not missingCredential`() {
     // A valid credential without access is not a missing credential — keep
     // the API's own message so the developer sees what was denied.
-    #expect((mapped(.permission) as? APIError)?.kind == .permission)
+    let error = apiError(mapped(.permission, "denied"))
+    #expect(error?.type == "permission_error")
+    #expect(error?.message == "denied")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `generic api error passes through unchanged`() {
-    #expect((mapped(.api, "internal error") as? APIError)?.kind == .api)
+  @Test func `generic api error becomes apiError`() {
+    #expect(apiError(mapped(.api, "internal error"))?.type == "api_error")
+  }
+
+  @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
+  @Test func `apiError carries the HTTP status and the type as the body wrote it`() {
+    let error = apiError(
+      ErrorMapper.map(
+        APIError(
+          kind: .other,
+          message: "Budget has been exceeded",
+          type: "budget_exceeded",
+          statusCode: 422
+        ),
+        usesAppAttest: false
+      )
+    )
+    #expect(error?.statusCode == 422)
+    #expect(error?.type == "budget_exceeded")
+    #expect(error?.message == "Budget has been exceeded")
+  }
+
+  @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
+  @Test func `apiError folds the request id into its message and description`() {
+    let mapped = mapped(.api, "internal error", requestID: "req_7")
+    #expect(apiError(mapped)?.message == "internal error (request_id: req_7)")
+    #expect(mapped.localizedDescription == "api_error: internal error (request_id: req_7)")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
@@ -130,8 +169,8 @@ import Testing
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)
-  @Test func `an unrecognized API error kind passes through as the APIError`() {
-    #expect((mapped(.other, "novel failure") as? APIError)?.kind == .other)
+  @Test func `an unrecognized API error kind becomes apiError`() {
+    #expect(apiError(mapped(.other, "novel failure"))?.message == "novel failure")
   }
 
   @available(iOS 27.0, macOS 27.0, visionOS 27.0, watchOS 27.0, *)

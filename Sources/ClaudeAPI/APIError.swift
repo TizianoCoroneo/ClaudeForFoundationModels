@@ -26,27 +26,45 @@ package struct APIError: Error, Sendable, Hashable, Codable {
   }
 
   package var kind: Kind
+  /// The `type` as the body wrote it: `kind`'s raw value for a known kind,
+  /// and the only record of an unrecognized one. `nil` when the error was
+  /// classified from the HTTP status alone.
+  package var type: String?
   package var message: String
   package var requestID: String?
+  /// The HTTP status of the response the error came in. `nil` for an SSE
+  /// `error` event, which arrives inside a successful response.
+  package var statusCode: Int?
 
-  package init(kind: Kind, message: String, requestID: String? = nil) {
+  package init(
+    kind: Kind,
+    message: String,
+    requestID: String? = nil,
+    type: String? = nil,
+    statusCode: Int? = nil
+  ) {
     self.kind = kind
+    self.type = type
     self.message = message
     self.requestID = requestID
+    self.statusCode = statusCode
   }
 
   private enum CodingKeys: String, CodingKey { case type, message }
 
   package init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
-    kind = try c.decode(Kind.self, forKey: .type)
+    let type = try c.decode(String.self, forKey: .type)
+    kind = Kind(rawValue: type) ?? .other
+    self.type = type
     message = try c.decode(String.self, forKey: .message)
     requestID = nil
+    statusCode = nil
   }
 
   package func encode(to encoder: Encoder) throws {
     var c = encoder.container(keyedBy: CodingKeys.self)
-    try c.encode(kind, forKey: .type)
+    try c.encode(type ?? kind.rawValue, forKey: .type)
     try c.encode(message, forKey: .message)
   }
 }
