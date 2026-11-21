@@ -293,6 +293,9 @@ do {
   print(response.content)
 } catch ClaudeError.missingCredential {
   // Prompt for an API key.
+} catch ClaudeError.apiError(let statusCode, let type, let message) {
+  // Any other refusal from the API, or from a proxy in front of it, with the
+  // HTTP status and the error type it sent.
 } catch {
   // Foundation Models errors (guardrails, context length, decoding) and transport errors.
 }

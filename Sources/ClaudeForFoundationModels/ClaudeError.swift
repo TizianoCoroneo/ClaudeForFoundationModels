@@ -21,6 +21,20 @@ public enum ClaudeError: LocalizedError, Sendable {
   /// unusable response, an unreachable credential store, and a client ID
   /// already in use against a different base URL.
   case attestationFailed
+  /// The API, or a proxy in front of it, refused the request with an error
+  /// that has no ``LanguageModelError`` equivalent: a permission error, a
+  /// server error, a request it rejected, or an error type this package
+  /// doesn't know, such as a proxy's own. Match on `statusCode` or `type` to
+  /// tell them apart.
+  ///
+  /// - Parameters:
+  ///   - statusCode: The HTTP status of the response. `nil` for an error the
+  ///     stream reported after a successful response.
+  ///   - type: The error's `type` as the response wrote it
+  ///     (`"permission_error"`, `"api_error"`, …). For a body without one,
+  ///     the type the status implies.
+  ///   - message: The error's message, with its request id when it had one.
+  case apiError(statusCode: Int?, type: String, message: String)
 
   public var errorDescription: String? {
     switch self {
@@ -30,6 +44,8 @@ public enum ClaudeError: LocalizedError, Sendable {
       "App Attest is not supported on this device or simulator."
     case .attestationFailed:
       "App attestation failed to produce a credential."
+    case .apiError(_, let type, let message):
+      "\(type): \(message)"
     }
   }
 }
